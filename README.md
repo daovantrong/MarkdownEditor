@@ -22,8 +22,7 @@ markdown-editor/
 ├── markdown-to-html.html         # Markdown → HTML converter (live sync)
 ├── md-html-converter.html         # Bidirectional converter suite
 ├── README.md                      # This file
-├── LICENSE                        # MIT License
-└── markdown-editor.rar            # Project archive
+└── LICENSE                        # MIT License
 ```
 
 ## 🛠️ Tools Overview
