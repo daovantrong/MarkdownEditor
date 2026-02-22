@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markdown Editor · Markdown ↔ HTML</title>
+
+<!-- Local libraries for offline use -->
+<script src="lib/marked.min.js"></script>
+<script src="lib/turndown.min.js"></script>
+<script src="lib/showdown.min.js"></script>
+<!-- CDN fallback (commented for offline use)
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/turndown/7.1.2/turndown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+-->
+
+<!-- Local Prism CSS for offline use -->
+<link id="prism-dark"  rel="stylesheet" href="lib/prism-tomorrow.min.css">
+<link id="prism-light" rel="stylesheet" href="lib/prism.min.css" disabled>
+<!-- CDN fallback (commented for offline use)
+<link id="prism-dark"  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+<link id="prism-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" disabled>
+-->
+<!-- Local Prism JS for offline use -->
+<script src="lib/prism.min.js"></script>
+<script src="lib/prism-markup.min.js"></script>
+<script src="lib/prism-markdown.min.js"></script>
+<script src="lib/prism-javascript.min.js"></script>
+<script src="lib/prism-python.min.js"></script>
+<script src="lib/prism-css.min.js"></script>
+<script src="lib/prism-bash.min.js"></script>
+<script src="lib/prism-json.min.js"></script>
+<!-- CDN fallback (commented for offline use)
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+-->
+
+<!-- Local fonts for offline use -->
+<link rel="stylesheet" href="lib/fonts.css">
+<!-- CDN fallback (commented for offline use)
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+-->
+
+<style>
+/* ── TOKENS ── */
+:root {
+  --bg:        #0d0f14;
+  --surface:   #131720;
+  --surface2:  #1a2030;
+  --border:    #252d3d;
+  --accent:    #4fffb0;
+  --accent2:   #ff6b6b;
+  --accent3:   #7eb8ff;
+  --text:      #e2e8f0;
+  --text-dim:  #94a3b8;
+  --text-muted:#64748b;
+  --fu: 'Syne', sans-serif;
+  --fc: 'JetBrains Mono', monospace;
+  --r: 7px;
+}
+[data-theme="light"] {
+  --bg:        #f2f5fc;
+  --surface:   #ffffff;
+  --surface2:  #edf0f8;
+  --border:    #cdd4e6;
+  --accent:    #0a9e62;
+  --accent2:   #e03e3e;
+  --accent3:   #1d5fd6;
+  --text:      #18202e;
+  --text-dim:  #3d4a6b;
+  --text-muted:#6b7694;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--fu);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  transition: background .25s, color .25s;
+}
+
+/* subtle grid */
+body::before {
+  content:'';
+  position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:
+    linear-gradient(rgba(79,255,176,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,255,176,.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+[data-theme="light"] body::before {
+  background-image:
+    linear-gradient(rgba(10,158,98,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10,158,98,.04) 1px, transparent 1px);
+}
+
+/* ── HEADER ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+  position: relative; z-index: 1;
+  transition: background .25s, border-color .25s;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 12px;
+}
+.logo-icon {
+  width: height: 34px;
+  background: linear-gradient(135deg, var(--accent), var(--accent3));
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800;
+  color: #0a0c10; flex-shrink: 0;
+}
+.logo-text { font-size: 18px; font-weight: 800; letter-spacing: -.5px; }
+.logo-text em { color: var(--accent); font-style: normal; }
+
+.header-desc {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-family: var(--fc);
+  letter-spacing: .2px;
+}
+
+/* theme pill */
+.theme-pill {
+  display: flex; align-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px; padding: 3px;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: background .25s, border-color .25s;
+  user-select: none;
+}
+.pill-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--accent);
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  z-index: 0; pointer-events: none;
+}
+[data-theme="light"] .pill-thumb { transform: translateX(26px); }
+.pill-icon {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; position: relative; z-index: 1;
+  transition: opacity .2s;
+}
+.pi-moon { opacity: 1; }
+.pi-sun  { opacity: .35; }
+[data-theme="light"] .pi-moon { opacity: .35; }
+[data-theme="light"] .pi-sun  { opacity: 1; }
+
+/* ── CONVERT BUTTONS BAR ── */
+.convert-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  flex-shrink: 0;
+  position: relative; z-index: 1;
+  transition: background .25s, border-color .25s;
+}
+
+.cvt-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 28px;
+  font-family: var(--fu); font-size: 13.5px; font-weight: 700;
+  letter-spacing: .3px;
+  cursor: pointer;
+  border: 2px solid;
+  border-radius: 10px;
+  transition: all .18s;
+  position: relative;
+  overflow: hidden;
+}
+.cvt-btn::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: white;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.cvt-btn:active::after { opacity: .07; }
+
+.cvt-btn-md {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--accent);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.cvt-btn-md:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-color: var(--accent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 22%, transparent);
+  transform: translateY(-1px);
+}
+.cvt-btn-md:active { transform: translateY(0); }
+
+.cvt-btn-html {
+  background: color-mix(in srgb, var(--accent3) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent3) 45%, transparent);
+  color: var(--accent3);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent3) 20%, transparent);
+}
+.cvt-btn-html:hover {
+  background: color-mix(in srgb, var(--accent3) 20%, transparent);
+  border-color: var(--accent3);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent3) 20%, transparent);
+  transform: translateY(-1px);
+}
+.cvt-btn-html:active { transform: translateY(0); }
+
+.cvt-btn svg { flex-shrink: 0; }
+
+.cvt-divider {
+  width: 1px; height: 32px;
+  background: var(--border);
+}
+
+/* ── NAV LINKS in footer ── */
+.foot-copy {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap;
+}
+.foot-copy .acc { color: var(--accent); }
+.foot-sep { color: var(--text-muted); }
+.nav-label {
+  font-size: 10.5px; color: var(--text-muted);
+  font-family: var(--fc); letter-spacing: .3px;
+}
+.nav-link {
+  font-family: var(--fc); font-size: 10.5px; font-weight: 600;
+  text-decoration: none; letter-spacing: .3px;
+  padding: 2px 8px; border-radius: 4px; border: 1px solid;
+  transition: all .15s;
+}
+.nav-link-green {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.nav-link-green:hover {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.nav-link-blue {
+  color: var(--accent3);
+  border-color: color-mix(in srgb, var(--accent3) 30%, transparent);
+  background: color-mix(in srgb, var(--accent3) 6%, transparent);
+}
+.nav-link-blue:hover {
+  background: color-mix(in srgb, var(--accent3) 15%, transparent);
+  border-color: color-mix(in srgb, var(--accent3) 55%, transparent);
+}
+
+/* ── PANELS ── */
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  overflow: hidden;
+  position: relative; z-index: 1;
+}
+
+.panel {
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transition: background .25s;
+}
+.panel:first-child { border-right: 1px solid var(--border); }
+
+/* panel header */
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+  transition: background .25s, border-color .25s;
+}
+.panel-title {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 1.8px; text-transform: uppercase;
+  color: var(--text-muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.panel-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.panel-dot.blue { background: var(--accent3); }
+
+.panel-actions { display: flex; gap: 6px; }
+
+.pabtn {
+  padding: 4px 11px;
+  font-family: var(--fu); font-size: 11px; font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface2);
+  color: var(--text-muted);
+  transition: all .15s;
+  display: flex; align-items: center; gap: 5px;
+  letter-spacing: .3px;
+}
+.pabtn:hover { color: var(--text); background: var(--surface); border-color: var(--text-muted); }
+.pabtn.copy:hover { color: var(--accent3); border-color: color-mix(in srgb, var(--accent3) 45%, transparent); background: color-mix(in srgb, var(--accent3) 8%, transparent); }
+.pabtn.clear:hover { color: var(--accent2); border-color: color-mix(in srgb, var(--accent2) 45%, transparent); background: color-mix(in srgb, var(--accent2) 8%, transparent); }
+
+/* ── TABS (Code / Preview) ── */
+.tab-bar {
+  display: flex; gap: 2px;
+  padding: 7px 14px 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  transition: background .25s;
+}
+.tab {
+  padding: 5px 14px;
+  font-family: var(--fu); font-size: 11.5px; font-weight: 600;
+  cursor: pointer; border: none; background: transparent;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all .15s;
+  letter-spacing: .3px;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab.active.blue { color: var(--accent3); border-bottom-color: var(--accent3); }
+
+/* ── CONTENT AREA ── */
+.panel-body { flex: 1; overflow: hidden; position: relative; }
+.view { width:100%; height:100%; position:absolute; inset:0; }
+.view.hidden { display: none !important; }
+
+/* ── SYNTAX HIGHLIGHTING EDITOR OVERLAY ──
+   pre sits behind textarea; textarea text is transparent
+   so Prism colors show through, caret remains visible.
+   Both share IDENTICAL font/size/padding/line-height.
+*/
+.editor-wrap {
+  position: relative;
+  width: 100%; height: 100%;
+  overflow: hidden;
+}
+/* Highlighted pre layer */
+.editor-hl {
+  position: absolute; inset: 0;
+  overflow: hidden;          /* scroll synced via JS */
+  pointer-events: none;
+  z-index: 0;
+}
+.editor-hl pre[class*="language-"] {
+  margin: 0 !important;
+  padding: 18px 22px !important;
+  min-height: 100%;
+  border-radius: 0 !important;
+  font-family: var(--fc) !important;
+  font-size: 13px !important;
+  line-height: 1.75 !important;
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+  word-wrap: break-word !important;
+  background: transparent !important;
+}
+/* textarea floats on top — text transparent, caret visible */
+textarea {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  background: transparent;
+  border: none; outline: none; resize: none;
+  padding: 18px 22px;
+  font-family: var(--fc); font-size: 13px; line-height: 1.75;
+  color: transparent;
+  caret-color: var(--accent);
+  z-index: 1;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  word-wrap: break-word;
+  tab-size: 2;
+  spellcheck: false;
+}
+textarea::selection         { background: rgba(79,255,176,.28); }
+[data-theme="light"] textarea::selection { background: rgba(10,158,98,.2); }
+textarea::placeholder       { color: var(--text-muted); }
+/* Editor background */
+[data-theme="dark"]  .editor-wrap { background: #1d2535; }
+[data-theme="light"] .editor-wrap { background: #f6f8fc; }
+/* Prism base text color per theme */
+[data-theme="dark"]  .editor-hl pre { color: #abb2bf !important; }
+[data-theme="light"] .editor-hl pre { color: #383a42 !important; }
+
+/* code view (prism) */
+.code-wrap {
+  width: 100%; height: 100%;
+  overflow: auto;
+}
+.code-wrap pre[class*="language-"] {
+  margin: 0;
+  min-height: 100%;
+  border-radius: 0;
+  font-family: var(--fc) !important;
+  font-size: 12.5px !important;
+  line-height: 1.75 !important;
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+}
+[data-theme="dark"]  .code-wrap pre[class*="language-"] { background: #1d2535 !important; }
+[data-theme="light"] .code-wrap pre[class*="language-"] { background: #f6f8fc !important; color: #383a42 !important; }
+
+/* preview */
+.preview-wrap {
+  width: 100%; height: 100%;
+  overflow-y: auto;
+  padding: 20px 24px;
+  font-family: var(--fc); font-size: 13.5px; line-height: 1.75;
+  color: var(--text-dim);
+}
+.preview-wrap h1,.preview-wrap h2,.preview-wrap h3,
+.preview-wrap h4,.preview-wrap h5,.preview-wrap h6 {
+  font-family: var(--fu); font-weight: 700;
+  color: var(--text); margin: 1.3em 0 .5em; line-height: 1.3;
+}
+.preview-wrap h1 { font-size:1.7em; color:var(--accent); border-bottom:1px solid var(--border); padding-bottom:8px; }
+.preview-wrap h2 { font-size:1.3em; color:var(--accent3); }
+.preview-wrap h3 { font-size:1.1em; }
+.preview-wrap p  { margin:.7em 0; }
+.preview-wrap a  { color:var(--accent); text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent); }
+.preview-wrap a:hover { border-color:var(--accent); }
+.preview-wrap code:not([class]) {
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:4px; padding:1px 6px;
+  font-family:var(--fc); font-size:12px; color:var(--accent2);
+}
+.preview-wrap pre[class*="language-"] {
+  margin:1em 0; border-radius:8px; overflow:auto;
+  border:1px solid var(--border);
+}
+[data-theme="dark"]  .preview-wrap pre[class*="language-"] { background:#1d2535 !important; }
+[data-theme="light"] .preview-wrap pre[class*="language-"] { background:#f6f8fc !important; }
+.preview-wrap blockquote {
+  border-left:3px solid var(--accent);
+  padding:4px 0 4px 16px; margin:1em 0;
+  color:var(--text-muted); font-style:italic;
+}
+.preview-wrap ul,.preview-wrap ol { padding-left:1.6em; margin:.7em 0; line-height:1.9; }
+.preview-wrap ul li::marker { color:var(--accent); }
+.preview-wrap table { width:100%; border-collapse:collapse; margin:1em 0; font-size:13px; }
+.preview-wrap th {
+  background:var(--surface2); padding:8px 12px;
+  font-family:var(--fu); font-weight:600; color:var(--accent3);
+  border:1px solid var(--border); text-align:left;
+}
+.preview-wrap td { padding:7px 12px; border:1px solid var(--border); }
+.preview-wrap tr:hover td { background:color-mix(in srgb,var(--accent) 4%,transparent); }
+.preview-wrap hr { border:none; border-top:1px solid var(--border); margin:1.5em 0; }
+.preview-wrap img { max-width:100%; border-radius:6px; }
+
+/* ── FOOTER ── */
+footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 28px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+  position: relative; z-index: 1;
+  transition: background .25s, border-color .25s;
+}
+.foot-actions { display: flex; gap: 7px; }
+.fbtn {
+  padding: 6px 15px;
+  font-family: var(--fu); font-size: 12px; font-weight: 700;
+  cursor: pointer; border-radius: 7px;
+  transition: all .18s;
+  display: flex; align-items: center; gap: 6px; border: 1px solid;
+}
+.fbtn svg { flex-shrink: 0; }
+.fbtn-dl-html {
+  background: color-mix(in srgb,var(--accent) 10%,transparent);
+  border-color: color-mix(in srgb,var(--accent) 40%,transparent);
+  color: var(--accent);
+}
+.fbtn-dl-html:hover { background:color-mix(in srgb,var(--accent) 20%,transparent); border-color:var(--accent); }
+.fbtn-dl-md {
+  background: color-mix(in srgb,var(--accent3) 10%,transparent);
+  border-color: color-mix(in srgb,var(--accent3) 40%,transparent);
+  color: var(--accent3);
+}
+.fbtn-dl-md:hover { background:color-mix(in srgb,var(--accent3) 20%,transparent); border-color:var(--accent3); }
+.fbtn-clear {
+  background: color-mix(in srgb,var(--accent2) 8%,transparent);
+  border-color: color-mix(in srgb,var(--accent2) 40%,transparent);
+  color: var(--accent2);
+}
+.fbtn-clear:hover { background:color-mix(in srgb,var(--accent2) 18%,transparent); }
+.foot-copy { font-size:10.5px; color:var(--text-muted); font-family:var(--fc); }
+.foot-copy span { color:var(--accent); }
+
+/* scrollbar */
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--text-muted); }
+
+/* toast */
+.toast {
+  position:fixed; bottom:68px; left:50%;
+  transform:translateX(-50%) translateY(10px);
+  background:var(--surface2); border:1px solid var(--accent);
+  color:var(--accent); padding:7px 20px; border-radius:20px;
+  font-size:12px; font-family:var(--fu); font-weight:600;
+  opacity:0; transition:all .22s; pointer-events:none; z-index:300;
+  white-space:nowrap;
+  box-shadow:0 4px 20px color-mix(in srgb,var(--accent) 20%,transparent);
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* flash animation when panel receives output */
+@keyframes flash-green { 0%{box-shadow:inset 0 0 0 2px var(--accent)} 100%{box-shadow:inset 0 0 0 0px transparent} }
+@keyframes flash-blue  { 0%{box-shadow:inset 0 0 0 2px var(--accent3)} 100%{box-shadow:inset 0 0 0 0px transparent} }
+.flash-green { animation: flash-green .5s ease-out; }
+.flash-blue  { animation: flash-blue  .5s ease-out; }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — TABLET  ≤ 900px
+══════════════════════════════════════════ */
+@media (max-width: 900px) {
+  header { padding: 11px 16px; }
+  .header-desc { display: none; }
+  .convert-bar { gap: 10px; padding: 10px 16px; }
+  .cvt-btn { padding: 9px 18px; font-size: 12.5px; gap: 7px; }
+  .panels { grid-template-columns: 1fr 1fr; }
+  footer { padding: 8px 16px; }
+  .fbtn { padding: 6px 10px; font-size: 11px; }
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — MOBILE  ≤ 640px
+   Key changes:
+   • Remove fixed-height viewport lock
+   • Stack panels vertically
+   • Convert bar becomes vertical
+   • Header compact
+   • Footer wraps
+══════════════════════════════════════════ */
+@media (max-width: 640px) {
+
+  /* Allow page to scroll naturally on mobile */
+  html, body { height: auto; overflow: auto; }
+
+  .app {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .logo-text { font-size: 15px; }
+  .logo-icon { height: 28px; font-size: 12px; border-radius: 7px; }
+  .header-desc { display: none; }
+  .pill-icon { width: 22px; height: 22px; font-size: 12px; }
+  .pill-thumb { width: 22px; height: 22px; }
+  [data-theme="light"] .pill-thumb { transform: translateX(22px); }
+  .theme-pill { padding: 2px; }
+
+  /* ── Convert bar — stack vertically ── */
+  .convert-bar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+  .cvt-divider { display: none; }
+  .cvt-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 11px 16px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  /* ── Panels — stack vertically ── */
+  .panels {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    flex: none;
+  }
+  .panel {
+    overflow: visible;
+    height: auto;
+  }
+  .panel:first-child {
+    border-right: none;
+    border-bottom: 2px solid var(--border);
+  }
+
+  /* Panel head compact */
+  .panel-head {
+    padding: 7px 12px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .panel-title { font-size: 10px; letter-spacing: 1.4px; }
+  .pabtn { padding: 4px 9px; font-size: 10.5px; }
+
+  /* Tab bar compact */
+  .tab-bar { padding: 5px 10px 0; }
+  .tab { padding: 4px 12px; font-size: 11px; }
+
+  /* Panel body — fixed height so textareas are usable */
+  .panel-body {
+    height: 42vh;
+    min-height: 200px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Views still absolute-fill panel-body */
+  .view { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .view.hidden { display: none !important; }
+
+  textarea {
+    padding: 12px 14px;
+    font-size: 12px;
+  }
+  .preview-wrap {
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+
+  /* ── Footer — stack buttons ── */
+  footer {
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+    align-items: stretch;
+  }
+  .foot-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+  .fbtn {
+    justify-content: center;
+    padding: 8px 6px;
+    font-size: 11px;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .fbtn svg { display: none; }
+  .foot-copy {
+    text-align: center;
+    font-size: 10px;
+  }
+
+  /* Toast position */
+  .toast { bottom: 16px; font-size: 11.5px; }
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — VERY SMALL  ≤ 380px
+══════════════════════════════════════════ */
+@media (max-width: 380px) {
+  .foot-actions { grid-template-columns: 1fr 1fr; }
+  .fbtn-clear { grid-column: 1 / -1; }
+  .cvt-btn { font-size: 12px; padding: 10px 12px; }
+  .panel-body { height: 38vh; }
+}
+</style>
+</head>
+<body>
+
+<div class="app" style="position:relative;z-index:1;display:flex;flex-direction:column;height:100vh">
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">M↔H</div>
+    <div class="logo-text">Markdown<em> ↔ </em>HTML Converter</div>
+  </div>
+  <div class="header-desc">Markdown ↔ HTML Converter — Marked.js · Turndown.js · Showdown.js · PrismJS</div>
+  <div class="theme-pill" onclick="toggleTheme()" title="Toggle Light / Dark theme">
+    <div class="pill-thumb"></div>
+    <div class="pill-icon pi-moon">🌙</div>
+    <div class="pill-icon pi-sun">☀️</div>
+  </div>
+</header>
+
+<!-- ── CONVERT BUTTONS ── -->
+<div class="convert-bar">
+  <!-- Markdown → HTML -->
+  <button class="cvt-btn cvt-btn-md" onclick="convertMdToHtml()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <path d="M4 6h16M4 10h10M4 14h6"/><polyline points="15 14 19 18 15 22"/>
+    </svg>
+    Markdown → HTML
+  </button>
+
+  <div class="cvt-divider"></div>
+
+  <!-- HTML → Markdown -->
+  <button class="cvt-btn cvt-btn-html" onclick="convertHtmlToMd()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <polyline points="9 14 5 10 9 6"/><path d="M20 18v-2a4 4 0 00-4-4H5"/>
+    </svg>
+    HTML → Markdown
+  </button>
+</div>
+
+<!-- ── PANELS ── -->
+<div class="panels">
+
+  <!-- LEFT: Markdown -->
+  <div class="panel" id="panel-md">
+    <div class="panel-head">
+      <div class="panel-title">
+        <div class="panel-dot"></div>
+        Markdown
+      </div>
+      <div class="panel-actions">
+        <button class="pabtn copy" onclick="copyPanel('md')" title="Copy Markdown">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="9" y="9" width="13" height="13" rx="2"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg>Copy
+        </button>
+        <button class="pabtn clear" onclick="clearPanel('md')" title="Clear Markdown">✕ Clear</button>
+      </div>
+    </div>
+    <div class="tab-bar" id="tabs-md">
+      <button class="tab active" onclick="switchTab('md','edit')">Edit</button>
+      <button class="tab"        onclick="switchTab('md','preview')">Preview</button>
+    </div>
+    <div class="panel-body">
+      <!-- Edit -->
+      <div class="view" id="view-md-edit">
+        <div class="editor-wrap">
+          <div class="editor-hl" id="hl-md"><pre class="language-markdown"><code class="language-markdown"></code></pre></div>
+          <textarea id="ta-md" placeholder="# Hello World&#10;&#10;Type your **Markdown** here, then click [Markdown → HTML] to convert.&#10;&#10;```js&#10;console.log('Hello!');&#10;```" spellcheck="false"></textarea>
+        </div>
+      </div>
+      <!-- Preview -->
+      <div class="view hidden" id="view-md-preview">
+        <div class="preview-wrap" id="prev-md"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: HTML -->
+  <div class="panel" id="panel-html">
+    <div class="panel-head">
+      <div class="panel-title">
+        <div class="panel-dot blue"></div>
+        HTML
+      </div>
+      <div class="panel-actions">
+        <button class="pabtn copy" onclick="copyPanel('html')" title="Copy HTML">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="9" y="9" width="13" height="13" rx="2"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg>Copy
+        </button>
+        <button class="pabtn clear" onclick="clearPanel('html')" title="Clear HTML">✕ Clear</button>
+      </div>
+    </div>
+    <div class="tab-bar" id="tabs-html">
+      <button class="tab active blue" onclick="switchTab('html','code')">Code</button>
+      <button class="tab blue"        onclick="switchTab('html','preview')">Preview</button>
+    </div>
+    <div class="panel-body">
+      <!-- Code (editable textarea + highlighted overlay) -->
+      <div class="view" id="view-html-code">
+        <div class="editor-wrap">
+          <div class="editor-hl" id="hl-html"><pre class="language-markup"><code class="language-markup"></code></pre></div>
+          <textarea id="ta-html" placeholder="<p>Paste your <strong>HTML</strong> here, then click [HTML → Markdown] to convert.</p>" spellcheck="false"></textarea>
+        </div>
+      </div>
+      <!-- Preview (rendered HTML) -->
+      <div class="view hidden" id="view-html-preview">
+        <div class="preview-wrap" id="prev-html"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="foot-actions">
+    <button class="fbtn fbtn-dl-html" onclick="downloadFile('html')">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>Download HTML
+    </button>
+    <button class="fbtn fbtn-dl-md" onclick="downloadFile('md')">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>Download Markdown
+    </button>
+    <button class="fbtn fbtn-clear" onclick="clearAll()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+      </svg>Clear All
+    </button>
+  </div>
+  <div class="foot-copy">
+    <span>2026 © <span class="acc">TRONG.PRO</span></span>
+    <span class="foot-sep">·</span>
+    <span class="nav-label">Live sync?: -> </span>
+    <a class="nav-link nav-link-green" href="markdown-to-html.html" target="_blank">MD → HTML ↗</a>
+    <a class="nav-link nav-link-blue"  href="html-to-markdown.html"  target="_blank">HTML → MD ↗</a>
+  </div>
+</footer>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+/* ── Highlight sync helpers ───────────────────────── */
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function syncHighlight(taId, hlId, lang) {
+  const ta   = document.getElementById(taId);
+  const hl   = document.getElementById(hlId);
+  const pre  = hl.querySelector('pre');
+  const code = hl.querySelector('code');
+  // Ensure trailing newline so last line renders correctly
+  const text = ta.value.endsWith('\n') ? ta.value : ta.value + '\n';
+  code.textContent = text;
+  try { Prism.highlightElement(code); } catch(e) {}
+  // Sync scroll
+  hl.scrollTop  = ta.scrollTop;
+  hl.scrollLeft = ta.scrollLeft;
+}
+
+function syncScroll(ta, hlId) {
+  const hl = document.getElementById(hlId);
+  hl.scrollTop  = ta.scrollTop;
+  hl.scrollLeft = ta.scrollLeft;
+}
+
+/* ── Library init ─────────────────────────────────── */
+const td = new TurndownService({
+  headingStyle: 'atx', codeBlockStyle: 'fenced',
+  bulletListMarker: '-', hr: '---'
+});
+const sd = new showdown.Converter({
+  tables: true, strikethrough: true, tasklists: true,
+  ghCodeBlocks: true, simplifiedAutoLink: true
+});
+marked.setOptions({
+  highlight(code, lang) {
+    if (lang && Prism.languages[lang]) {
+      try { return Prism.highlight(code, Prism.languages[lang], lang); }
+      catch(e){}
+    }
+    return code;
+  },
+  langPrefix: 'language-',
+  gfm: true, breaks: false
+});
+
+/* ── Tab state ────────────────────────────────────── */
+const tabState = { md: 'edit', html: 'code' };
+
+function switchTab(panel, tab) {
+  tabState[panel] = tab;
+
+  if (panel === 'md') {
+    show('view-md-edit',    tab === 'edit');
+    show('view-md-preview', tab === 'preview');
+    setTabActive('tabs-md', tab === 'edit' ? 0 : 1);
+    if (tab === 'preview') {
+      document.getElementById('prev-md').innerHTML = marked.parse(
+        document.getElementById('ta-md').value || ''
+      );
+      Prism.highlightAllUnder(document.getElementById('prev-md'));
+    }
+  } else {
+    show('view-html-code',    tab === 'code');
+    show('view-html-preview', tab === 'preview');
+    setTabActive('tabs-html', tab === 'code' ? 0 : 1);
+    if (tab === 'preview') {
+      document.getElementById('prev-html').innerHTML =
+        document.getElementById('ta-html').value || '';
+      Prism.highlightAllUnder(document.getElementById('prev-html'));
+    }
+  }
+}
+
+function show(id, visible) {
+  document.getElementById(id).classList.toggle('hidden', !visible);
+}
+function setTabActive(barId, idx) {
+  document.getElementById(barId).querySelectorAll('.tab')
+    .forEach((t, i) => t.classList.toggle('active', i === idx));
+}
+
+/* ── CONVERT: Markdown → HTML ─────────────────────── */
+function convertMdToHtml() {
+  const md = document.getElementById('ta-md').value.trim();
+  if (!md) { showToast('⚠ Markdown panel is empty!'); return; }
+
+  const html = marked.parse(md);
+  document.getElementById('ta-html').value = html;
+  syncHighlight('ta-html', 'hl-html', 'markup');
+
+  // Switch HTML panel to Code tab to show result
+  if (tabState.html === 'preview') switchTab('html', 'code');
+
+  // Flash feedback on HTML panel
+  document.getElementById('panel-html').classList.remove('flash-blue');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.getElementById('panel-html').classList.add('flash-blue');
+    });
+  });
+
+  showToast('✓ Converted Markdown → HTML');
+}
+
+/* ── CONVERT: HTML → Markdown ─────────────────────── */
+function convertHtmlToMd() {
+  const html = document.getElementById('ta-html').value.trim();
+  if (!html) { showToast('⚠ HTML panel is empty!'); return; }
+
+  const md = td.turndown(html);
+  document.getElementById('ta-md').value = md;
+  syncHighlight('ta-md', 'hl-md', 'markdown');
+
+  // Switch MD panel to Edit tab to show result
+  if (tabState.md === 'preview') switchTab('md', 'edit');
+
+  // Flash feedback on Markdown panel
+  document.getElementById('panel-md').classList.remove('flash-green');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.getElementById('panel-md').classList.add('flash-green');
+    });
+  });
+
+  showToast('✓ Converted HTML → Markdown');
+}
+
+/* ── Panel actions ────────────────────────────────── */
+function copyPanel(panel) {
+  const id = panel === 'md' ? 'ta-md' : 'ta-html';
+  const val = document.getElementById(id).value;
+  if (!val) { showToast('Nothing to copy!'); return; }
+  navigator.clipboard.writeText(val).then(() => showToast('✓ Copied to clipboard!'));
+}
+
+function clearPanel(panel) {
+  const id = panel === 'md' ? 'ta-md' : 'ta-html';
+  document.getElementById(id).value = '';
+  if (panel === 'md') {
+    document.getElementById('prev-md').innerHTML = '';
+    syncHighlight('ta-md', 'hl-md', 'markdown');
+  } else {
+    document.getElementById('prev-html').innerHTML = '';
+    syncHighlight('ta-html', 'hl-html', 'markup');
+  }
+  showToast('Cleared!');
+}
+
+function clearAll() {
+  document.getElementById('ta-md').value   = '';
+  document.getElementById('ta-html').value = '';
+  document.getElementById('prev-md').innerHTML   = '';
+  document.getElementById('prev-html').innerHTML = '';
+  syncHighlight('ta-md',   'hl-md',   'markdown');
+  syncHighlight('ta-html', 'hl-html', 'markup');
+  showToast('All cleared!');
+}
+
+/* ── Download ─────────────────────────────────────── */
+function downloadFile(type) {
+  const id   = type === 'md' ? 'ta-md' : 'ta-html';
+  const val  = document.getElementById(id).value;
+  if (!val) { showToast('Nothing to download!'); return; }
+  const ext  = type === 'md' ? 'md' : 'html';
+  const mime = type === 'md' ? 'text/markdown' : 'text/html';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([val], { type: mime }));
+  a.download = `output.${ext}`;
+  a.click();
+  showToast(`✓ Downloaded output.${ext}`);
+}
+
+/* ── Theme ────────────────────────────────────────── */
+let dark = true;
+function toggleTheme() {
+  dark = !dark;
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  document.getElementById('prism-dark').disabled  = !dark;
+  document.getElementById('prism-light').disabled =  dark;
+  showToast(dark ? '🌙 Dark theme' : '☀️ Light theme');
+}
+
+/* ── Toast ────────────────────────────────────────── */
+let tt;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(tt);
+  tt = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ── Demo content ─────────────────────────────────── */
+const taMd   = document.getElementById('ta-md');
+const taHtml = document.getElementById('ta-html');
+
+// Input → update highlight
+taMd.addEventListener('input',   () => syncHighlight('ta-md',   'hl-md',   'markdown'));
+taHtml.addEventListener('input',  () => syncHighlight('ta-html', 'hl-html', 'markup'));
+// Scroll → sync pre layer
+taMd.addEventListener('scroll',  () => syncScroll(taMd,   'hl-md'));
+taHtml.addEventListener('scroll', () => syncScroll(taHtml, 'hl-html'));
+
+taMd.value = `# Hello, Markdown Editor 🚀
+
+Type or paste your **Markdown** in this panel, then click **[Markdown → HTML]** to convert.
+
+## Features
+- Two fixed panels: **Markdown** (left) and **HTML** (right)
+- Click the buttons to convert in either direction
+- **Edit / Preview** tabs on each panel
+- Copy, Download, Clear per panel
+
+## Code example
+
+\`\`\`javascript
+function greet(name) {
+  return \`Hello, \${name}! Welcome to Markdown Editor.\`;
+}
+console.log(greet('World'));
+\`\`\`
+
+\`\`\`python
+def greet(name):
+    return f"Hello, {name}!"
+
+print(greet("World"))
+\`\`\`
+
+## Table
+
+| Library    | Role               |
+|------------|--------------------|
+| Marked.js  | Markdown → HTML    |
+| Turndown   | HTML → Markdown    |
+| Showdown   | Markdown ↔ HTML    |
+| PrismJS    | Syntax highlight   |
+
+> **Tip:** Switch to the **Preview** tab to see the rendered result.
+`;
+
+// Initial highlight for both panels
+syncHighlight('ta-md',   'hl-md',   'markdown');
+syncHighlight('ta-html', 'hl-html', 'markup');
+</script>
+</body>
+</html>

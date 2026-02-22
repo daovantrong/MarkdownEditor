@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markdown Editor · HTML → Markdown</title>
+
+<!-- Local libraries for offline use -->
+<script src="lib/marked.min.js"></script>
+<script src="lib/turndown.min.js"></script>
+<!-- CDN fallback (commented for offline use)
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/turndown/7.1.2/turndown.min.js"></script>
+-->
+<!-- Local Prism CSS for offline use -->
+<link id="prism-dark"  rel="stylesheet" href="lib/prism-tomorrow.min.css">
+<link id="prism-light" rel="stylesheet" href="lib/prism.min.css" disabled>
+<!-- CDN fallback (commented for offline use)
+<link id="prism-dark"  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+<link id="prism-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" disabled>
+-->
+<!-- Local Prism JS for offline use -->
+<script src="lib/prism.min.js"></script>
+<script src="lib/prism-markup.min.js"></script>
+<script src="lib/prism-markdown.min.js"></script>
+<script src="lib/prism-javascript.min.js"></script>
+<script src="lib/prism-python.min.js"></script>
+<script src="lib/prism-css.min.js"></script>
+<script src="lib/prism-bash.min.js"></script>
+<!-- CDN fallback (commented for offline use)
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+-->
+<!-- Local fonts for offline use -->
+<link rel="stylesheet" href="lib/fonts.css">
+<!-- CDN fallback (commented for offline use)
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+-->
+
+<style>
+:root {
+  --bg:       #0d0f14;
+  --surface:  #131720;
+  --surface2: #1a2030;
+  --border:   #252d3d;
+  --acc:      #7eb8ff;   /* blue as primary — HTML side */
+  --acc2:     #ff6b6b;
+  --acc3:     #4fffb0;
+  --text:     #e2e8f0;
+  --dim:      #94a3b8;
+  --muted:    #64748b;
+  --fu: 'Syne', sans-serif;
+  --fc: 'JetBrains Mono', monospace;
+}
+[data-theme="light"] {
+  --bg:       #f0f4fc;
+  --surface:  #ffffff;
+  --surface2: #e8edf8;
+  --border:   #c8d2e8;
+  --acc:      #1d5fd6;
+  --acc2:     #e03e3e;
+  --acc3:     #0a9e62;
+  --text:     #18202e;
+  --dim:      #3d4a6b;
+  --muted:    #6b7694;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--fu);
+  display:flex; flex-direction:column; height:100vh; overflow:hidden;
+  transition: background .25s, color .25s;
+}
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:
+    linear-gradient(rgba(126,184,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(126,184,255,.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+[data-theme="light"] body::before {
+  background-image:
+    linear-gradient(rgba(29,95,214,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(29,95,214,.04) 1px, transparent 1px);
+}
+
+/* ── HEADER ── */
+header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 24px; background:var(--surface); border-bottom:1px solid var(--border);
+  flex-shrink:0; position:relative; z-index:2;
+  transition: background .25s, border-color .25s;
+}
+.logo { display:flex; align-items:center; gap:11px; }
+.logo-icon {
+  height:32px; border-radius:8px; flex-shrink:0;
+  background: linear-gradient(135deg, var(--acc), var(--acc3));
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:800; color:#060809;
+}
+.logo-text { font-size:17px; font-weight:800; letter-spacing:-.5px; }
+.logo-text em { color:var(--acc); font-style:normal; }
+
+.hdr-right { display:flex; align-items:center; gap:10px; }
+.live-badge {
+  display:flex; align-items:center; gap:6px;
+  background:color-mix(in srgb,var(--acc) 10%,transparent);
+  border:1px solid color-mix(in srgb,var(--acc) 35%,transparent);
+  border-radius:20px; padding:4px 12px;
+  font-size:11px; font-weight:700; color:var(--acc); font-family:var(--fc); letter-spacing:.5px;
+}
+.live-dot { width:6px; height:6px; border-radius:50%; background:var(--acc); animation:blink 1.5s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+.theme-pill {
+  display:flex; align-items:center; background:var(--surface2); border:1px solid var(--border);
+  border-radius:20px; padding:2px; cursor:pointer; position:relative; overflow:hidden; user-select:none;
+  transition:background .25s, border-color .25s;
+}
+.pill-thumb { position:absolute; top:2px; left:2px; width:24px; height:24px; border-radius:50%; background:var(--acc); transition:transform .3s cubic-bezier(.4,0,.2,1); z-index:0; pointer-events:none; }
+[data-theme="light"] .pill-thumb { transform:translateX(24px); }
+.pill-icon { width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:13px; position:relative; z-index:1; transition:opacity .2s; }
+.pi-moon { opacity:1; } .pi-sun { opacity:.35; }
+[data-theme="light"] .pi-moon { opacity:.35; } [data-theme="light"] .pi-sun { opacity:1; }
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:6px 24px; background:var(--surface2); border-bottom:1px solid var(--border);
+  flex-shrink:0; position:relative; z-index:2; gap:8px;
+  transition:background .25s;
+}
+.toolbar-left, .toolbar-right { display:flex; align-items:center; gap:6px; }
+.panel-label { font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--muted); padding:0 4px; }
+.tbtn { padding:4px 12px; font-family:var(--fu); font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--muted); transition:all .15s; }
+.tbtn:hover { color:var(--text); background:var(--surface); }
+.tbtn.active { color:var(--acc); border-color:color-mix(in srgb,var(--acc) 35%,transparent); background:color-mix(in srgb,var(--acc) 8%,transparent); }
+.tbtn.green.active { color:var(--acc3); border-color:color-mix(in srgb,var(--acc3) 35%,transparent); background:color-mix(in srgb,var(--acc3) 8%,transparent); }
+.pabtn { padding:3px 10px; font-family:var(--fu); font-size:10.5px; font-weight:700; cursor:pointer; border:1px solid var(--border); border-radius:5px; background:var(--surface2); color:var(--muted); transition:all .15s; display:flex; align-items:center; gap:4px; }
+.pabtn:hover { color:var(--text); background:var(--surface); border-color:var(--muted); }
+.pabtn.clr:hover { color:var(--acc2); border-color:color-mix(in srgb,var(--acc2) 40%,transparent); background:color-mix(in srgb,var(--acc2) 8%,transparent); }
+.abtn { padding:4px 12px; font-family:var(--fu); font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--dim); transition:all .15s; display:flex; align-items:center; gap:5px; }
+.abtn:hover { color:var(--acc3); border-color:color-mix(in srgb,var(--acc3) 40%,transparent); background:color-mix(in srgb,var(--acc3) 8%,transparent); }
+.sep { width:1px; height:20px; background:var(--border); margin:0 2px; }
+
+/* ── MAIN ── */
+.main { display:grid; grid-template-columns:1fr 1fr; flex:1; overflow:hidden; position:relative; z-index:1; }
+.panel { display:flex; flex-direction:column; overflow:hidden; }
+.panel.left { border-right:2px solid var(--border); }
+
+.panel-head { display:flex; align-items:center; justify-content:space-between; padding:8px 16px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; transition:background .25s; }
+.phead-title { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted); }
+.phead-dot { width:7px; height:7px; border-radius:50%; background:var(--acc); flex-shrink:0; }
+.phead-dot.green { background:var(--acc3); }
+
+.tab-bar { display:flex; gap:1px; padding:6px 14px 0; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; transition:background .25s; }
+.tab { padding:5px 14px; font-family:var(--fu); font-size:11px; font-weight:600; cursor:pointer; border:none; background:transparent; color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .15s; }
+.tab:hover { color:var(--text); }
+.tab.active      { color:var(--acc);  border-bottom-color:var(--acc); }
+.tab.active.green{ color:var(--acc3); border-bottom-color:var(--acc3); }
+
+.panel-body { flex:1; overflow:hidden; position:relative; }
+.view { position:absolute; inset:0; width:100%; height:100%; }
+.view.hidden { display:none !important; }
+
+/* ── EDITOR OVERLAY ── */
+.editor-wrap { position:relative; width:100%; height:100%; overflow:hidden; }
+.editor-hl { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0; }
+.editor-hl pre[class*="language-"] {
+  margin:0 !important; padding:16px 20px !important; min-height:100%;
+  border-radius:0 !important; font-family:var(--fc) !important;
+  font-size:13px !important; line-height:1.75 !important;
+  white-space:pre-wrap !important; word-break:break-all !important;
+  word-wrap:break-word !important; background:transparent !important;
+}
+textarea {
+  position:absolute; inset:0; width:100%; height:100%;
+  background:transparent; border:none; outline:none; resize:none;
+  padding:16px 20px; font-family:var(--fc); font-size:13px; line-height:1.75;
+  color:transparent; caret-color:var(--acc); z-index:1;
+  overflow:auto; white-space:pre-wrap; word-break:break-all; word-wrap:break-word; tab-size:2;
+}
+textarea::selection { background:rgba(126,184,255,.28); }
+[data-theme="light"] textarea::selection { background:rgba(29,95,214,.18); }
+textarea::placeholder { color:var(--muted); }
+[data-theme="dark"]  .editor-wrap { background:#1d2535; }
+[data-theme="light"] .editor-wrap { background:#f6f8fc; }
+[data-theme="dark"]  .editor-hl pre { color:#abb2bf !important; }
+[data-theme="light"] .editor-hl pre { color:#383a42 !important; }
+
+/* ── PREVIEW ── */
+.preview-wrap {
+  position:absolute; inset:0; overflow-y:auto; padding:18px 22px;
+  font-family:var(--fc); font-size:13.5px; line-height:1.75; color:var(--dim);
+}
+.preview-wrap h1,.preview-wrap h2,.preview-wrap h3,.preview-wrap h4 { font-family:var(--fu); font-weight:700; color:var(--text); margin:1.3em 0 .5em; line-height:1.3; }
+.preview-wrap h1 { font-size:1.7em; color:var(--acc); border-bottom:1px solid var(--border); padding-bottom:8px; }
+.preview-wrap h2 { font-size:1.3em; color:var(--acc3); }
+.preview-wrap h3 { font-size:1.1em; }
+.preview-wrap p  { margin:.7em 0; }
+.preview-wrap a  { color:var(--acc); text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--acc) 35%,transparent); }
+.preview-wrap a:hover { border-color:var(--acc); }
+.preview-wrap code:not([class]) { background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-family:var(--fc); font-size:12px; color:var(--acc2); }
+.preview-wrap pre[class*="language-"] { margin:1em 0; border-radius:8px; overflow:auto; border:1px solid var(--border); }
+[data-theme="dark"]  .preview-wrap pre[class*="language-"] { background:#1d2535 !important; }
+[data-theme="light"] .preview-wrap pre[class*="language-"] { background:#f6f8fc !important; }
+.preview-wrap blockquote { border-left:3px solid var(--acc); padding:4px 0 4px 16px; margin:1em 0; color:var(--muted); font-style:italic; }
+.preview-wrap ul,.preview-wrap ol { padding-left:1.6em; margin:.7em 0; line-height:1.9; }
+.preview-wrap ul li::marker { color:var(--acc); }
+.preview-wrap table { width:100%; border-collapse:collapse; margin:1em 0; font-size:13px; }
+.preview-wrap th { background:var(--surface2); padding:8px 12px; font-family:var(--fu); font-weight:600; color:var(--acc3); border:1px solid var(--border); text-align:left; }
+.preview-wrap td { padding:7px 12px; border:1px solid var(--border); }
+.preview-wrap tr:hover td { background:color-mix(in srgb,var(--acc) 4%,transparent); }
+.preview-wrap hr { border:none; border-top:1px solid var(--border); margin:1.5em 0; }
+.preview-wrap img { max-width:100%; border-radius:6px; }
+
+/* rendered HTML preview — shares typography with preview-wrap */
+.html-render {
+  position:absolute; inset:0; overflow-y:auto; padding:18px 22px;
+  font-family:var(--fc); font-size:13.5px; line-height:1.75; color:var(--dim);
+}
+.html-render h1,.html-render h2,.html-render h3,.html-render h4,.html-render h5,.html-render h6 { font-family:var(--fu); font-weight:700; color:var(--text); margin:1.3em 0 .5em; line-height:1.3; }
+.html-render h1 { font-size:1.7em; color:var(--acc); border-bottom:1px solid var(--border); padding-bottom:8px; }
+.html-render h2 { font-size:1.3em; color:var(--acc3); }
+.html-render h3 { font-size:1.1em; }
+.html-render p  { margin:.7em 0; }
+.html-render a  { color:var(--acc); text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--acc) 35%,transparent); }
+.html-render a:hover { border-color:var(--acc); }
+.html-render strong { color:var(--text); font-weight:700; }
+.html-render em     { font-style:italic; }
+.html-render code   { background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-family:var(--fc); font-size:12px; color:var(--acc2); }
+.html-render pre    { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin:1em 0; overflow:auto; }
+.html-render pre code { background:none; border:none; padding:0; color:var(--dim); font-size:13px; }
+.html-render blockquote { border-left:3px solid var(--acc); padding:4px 0 4px 16px; margin:1em 0; color:var(--muted); font-style:italic; }
+.html-render ul,.html-render ol { padding-left:1.6em; margin:.7em 0; line-height:1.9; }
+.html-render ul li::marker { color:var(--acc); }
+.html-render ol li::marker { color:var(--acc3); }
+.html-render table { width:100%; border-collapse:collapse; margin:1em 0; font-size:13px; }
+.html-render th { background:var(--surface2); padding:8px 12px; font-family:var(--fu); font-weight:600; color:var(--acc3); border:1px solid var(--border); text-align:left; }
+.html-render td { padding:7px 12px; border:1px solid var(--border); }
+.html-render tr:hover td { background:color-mix(in srgb,var(--acc) 4%,transparent); }
+.html-render hr { border:none; border-top:1px solid var(--border); margin:1.5em 0; }
+.html-render img { max-width:100%; border-radius:6px; }
+
+/* ── FOOTER ── */
+footer {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:9px 24px; border-top:1px solid var(--border);
+  background:var(--surface); flex-shrink:0; position:relative; z-index:2;
+  transition:background .25s, border-color .25s;
+}
+.foot-actions { display:flex; gap:7px; }
+.fbtn { padding:6px 14px; font-family:var(--fu); font-size:11.5px; font-weight:700; cursor:pointer; border-radius:7px; transition:all .18s; display:flex; align-items:center; gap:6px; border:1px solid; }
+.fb-blue  { background:color-mix(in srgb,var(--acc) 10%,transparent); border-color:color-mix(in srgb,var(--acc) 40%,transparent); color:var(--acc); }
+.fb-blue:hover  { background:color-mix(in srgb,var(--acc) 20%,transparent); border-color:var(--acc); }
+.fb-green { background:color-mix(in srgb,var(--acc3) 10%,transparent); border-color:color-mix(in srgb,var(--acc3) 40%,transparent); color:var(--acc3); }
+.fb-green:hover { background:color-mix(in srgb,var(--acc3) 20%,transparent); border-color:var(--acc3); }
+.fb-red   { background:color-mix(in srgb,var(--acc2) 8%,transparent); border-color:color-mix(in srgb,var(--acc2) 35%,transparent); color:var(--acc2); }
+.fb-red:hover   { background:color-mix(in srgb,var(--acc2) 15%,transparent); }
+.foot-copy { font-size:10.5px; color:var(--muted); font-family:var(--fc); }
+.foot-copy span { color:var(--acc); }
+
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+
+.toast {
+  position:fixed; bottom:68px; left:50%;
+  transform:translateX(-50%) translateY(10px);
+  background:var(--surface2); border:1px solid var(--acc); color:var(--acc);
+  padding:7px 20px; border-radius:20px; font-size:12px; font-family:var(--fu); font-weight:600;
+  opacity:0; transition:all .22s; pointer-events:none; z-index:300; white-space:nowrap;
+  box-shadow:0 4px 20px color-mix(in srgb,var(--acc) 20%,transparent);
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ── RESPONSIVE ── */
+@media (max-width:900px) {
+  header { padding:10px 16px; } .toolbar { padding:5px 16px; } footer { padding:8px 16px; }
+}
+@media (max-width:640px) {
+  html, body { height:auto; overflow:auto; }
+  body { min-height:100dvh; }
+  .main { display:flex; flex-direction:column; overflow:visible; flex:none; }
+  .panel { overflow:visible; }
+  .panel.left { border-right:none; border-bottom:2px solid var(--border); }
+  .panel-body { height:42vh; min-height:200px; }
+  header { padding:9px 12px; flex-wrap:wrap; gap:8px; }
+  .toolbar { padding:5px 12px; flex-wrap:wrap; gap:5px; }
+  footer { flex-direction:column; gap:7px; padding:10px 12px; align-items:stretch; }
+  .foot-actions { display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; }
+  .fbtn { justify-content:center; padding:7px 4px; font-size:10.5px; }
+  .fbtn svg { display:none; }
+  .foot-copy { text-align:center; font-size:10px; }
+}
+@media (max-width:380px) {
+  .foot-actions { grid-template-columns:1fr 1fr; }
+  .fb-red { grid-column:1/-1; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">H→M</div>
+    <div class="logo-text">HTML <em>→ Markdown</em></div>
+  </div>
+  <div class="hdr-right">
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <div class="theme-pill" onclick="toggleTheme()" title="Toggle theme">
+      <div class="pill-thumb"></div>
+      <div class="pill-icon pi-moon">🌙</div>
+      <div class="pill-icon pi-sun">☀️</div>
+    </div>
+  </div>
+</header>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <div class="toolbar-left">
+    <span class="panel-label">HTML</span>
+    <button class="tbtn active"  id="html-code-btn" onclick="switchLeft('code')">Code</button>
+    <button class="tbtn"         id="html-rend-btn" onclick="switchLeft('rendered')">Rendered</button>
+    <div class="sep"></div>
+    <button class="pabtn clr" onclick="clearHtml()">✕ Clear</button>
+  </div>
+  <div class="toolbar-right">
+    <span class="panel-label">Markdown</span>
+    <button class="tbtn green active" id="md-edit-btn" onclick="switchRight('edit')">Edit</button>
+    <button class="tbtn green"        id="md-prev-btn" onclick="switchRight('preview')">Preview</button>
+    <div class="sep"></div>
+    <button class="abtn" onclick="copyMd()">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy MD
+    </button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT: HTML input -->
+  <div class="panel left">
+    <div class="panel-head">
+      <div class="phead-title"><div class="phead-dot"></div>Input</div>
+    </div>
+    <div class="panel-body">
+      <!-- Code (highlighted textarea) -->
+      <div class="view" id="view-html-code">
+        <div class="editor-wrap">
+          <div class="editor-hl" id="hl-html"><pre class="language-markup"><code class="language-markup"></code></pre></div>
+          <textarea id="ta-html" spellcheck="false"
+            placeholder="<h1>Hello World</h1>&#10;<p>Paste your <strong>HTML</strong> here — Markdown converts live on the right.</p>"></textarea>
+        </div>
+      </div>
+      <!-- Rendered HTML view -->
+      <div class="view hidden" id="view-html-rendered">
+        <div class="html-render" id="html-render-area"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Markdown output -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="phead-title"><div class="phead-dot green"></div>Output</div>
+    </div>
+    <div class="panel-body">
+      <!-- Edit (highlighted textarea, read-only) -->
+      <div class="view" id="view-md-edit">
+        <div class="editor-wrap">
+          <div class="editor-hl" id="hl-md"><pre class="language-markdown"><code class="language-markdown"></code></pre></div>
+          <textarea id="ta-md" spellcheck="false" readonly
+            placeholder="Markdown output appears here as you type..."></textarea>
+        </div>
+      </div>
+      <!-- Preview (rendered markdown) -->
+      <div class="view hidden" id="view-md-preview">
+        <div class="preview-wrap" id="prev-md"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-actions">
+    <button class="fbtn fb-blue" onclick="downloadFile('html')">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download HTML
+    </button>
+    <button class="fbtn fb-green" onclick="downloadFile('md')">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download MD
+    </button>
+    <button class="fbtn fb-red" onclick="clearAll()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+      Clear All
+    </button>
+  </div>
+  <div class="foot-copy">2026 © <span>TRONG.PRO</span> — Turndown.js · PrismJS</div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const td = new TurndownService({
+  headingStyle: 'atx', codeBlockStyle: 'fenced',
+  bulletListMarker: '-', hr: '---'
+});
+
+// ── Highlight sync ──────────────────────────────────
+function syncHl(taId, hlId) {
+  const ta   = document.getElementById(taId);
+  const code = document.getElementById(hlId).querySelector('code');
+  code.textContent = ta.value.endsWith('\n') ? ta.value : ta.value + '\n';
+  try { Prism.highlightElement(code); } catch(e){}
+  document.getElementById(hlId).scrollTop  = ta.scrollTop;
+  document.getElementById(hlId).scrollLeft = ta.scrollLeft;
+}
+
+// ── Live conversion ─────────────────────────────────
+let timer;
+function onHtmlInput() {
+  syncHl('ta-html', 'hl-html');
+  clearTimeout(timer);
+  timer = setTimeout(convert, 120);
+}
+
+function convert() {
+  const html = document.getElementById('ta-html').value;
+  const out  = html.trim() ? td.turndown(html) : '';
+  document.getElementById('ta-md').value = out;
+  syncHl('ta-md', 'hl-md');
+  if (leftTab  === 'rendered') updateRendered();
+  if (rightTab === 'preview')  updateMdPreview();
+}
+
+// ── Tabs ────────────────────────────────────────────
+let leftTab = 'code', rightTab = 'edit';
+
+function switchLeft(tab) {
+  leftTab = tab;
+  vis('view-html-code',     tab === 'code');
+  vis('view-html-rendered', tab === 'rendered');
+  act('html-code-btn', tab === 'code');
+  act('html-rend-btn', tab === 'rendered');
+  if (tab === 'rendered') updateRendered();
+}
+function switchRight(tab) {
+  rightTab = tab;
+  vis('view-md-edit',    tab === 'edit');
+  vis('view-md-preview', tab === 'preview');
+  act('md-edit-btn', tab === 'edit');
+  act('md-prev-btn', tab === 'preview');
+  if (tab === 'preview') updateMdPreview();
+}
+function vis(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
+function act(id, on)   { document.getElementById(id).classList.toggle('active', on); }
+
+function updateRendered() {
+  document.getElementById('html-render-area').innerHTML = document.getElementById('ta-html').value || '';
+}
+function updateMdPreview() {
+  const md = document.getElementById('ta-md').value || '';
+  document.getElementById('prev-md').innerHTML = md.trim() ? marked.parse(md) : '';
+  Prism.highlightAllUnder(document.getElementById('prev-md'));
+}
+
+// ── Actions ─────────────────────────────────────────
+function copyMd() {
+  const v = document.getElementById('ta-md').value;
+  if (!v) { toast('Nothing to copy!'); return; }
+  navigator.clipboard.writeText(v).then(() => toast('✓ Copied Markdown!'));
+}
+function clearHtml() {
+  document.getElementById('ta-html').value = '';
+  syncHl('ta-html','hl-html'); convert(); toast('Cleared!');
+}
+function clearAll() {
+  document.getElementById('ta-html').value = document.getElementById('ta-md').value = '';
+  syncHl('ta-html','hl-html'); syncHl('ta-md','hl-md');
+  document.getElementById('html-render-area').innerHTML = document.getElementById('prev-md').innerHTML = '';
+  toast('All cleared!');
+}
+function downloadFile(type) {
+  const id = type === 'html' ? 'ta-html' : 'ta-md';
+  const v  = document.getElementById(id).value;
+  if (!v) { toast('Nothing to download!'); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([v], { type: type === 'md' ? 'text/markdown' : 'text/html' }));
+  a.download = `output.${type}`; a.click();
+  toast(`✓ Downloaded output.${type}`);
+}
+
+// ── Theme ────────────────────────────────────────────
+let dark = true;
+function toggleTheme() {
+  dark = !dark;
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  document.getElementById('prism-dark').disabled  = !dark;
+  document.getElementById('prism-light').disabled =  dark;
+  toast(dark ? '🌙 Dark' : '☀️ Light');
+}
+
+// ── Toast ────────────────────────────────────────────
+let tt;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ── Wire up events ───────────────────────────────────
+const taHtml = document.getElementById('ta-html');
+taHtml.addEventListener('input',  onHtmlInput);
+taHtml.addEventListener('scroll', () => {
+  document.getElementById('hl-html').scrollTop  = taHtml.scrollTop;
+  document.getElementById('hl-html').scrollLeft = taHtml.scrollLeft;
+});
+const taMd = document.getElementById('ta-md');
+taMd.addEventListener('scroll', () => {
+  document.getElementById('hl-md').scrollTop  = taMd.scrollTop;
+  document.getElementById('hl-md').scrollLeft = taMd.scrollLeft;
+});
+
+// ── Demo ─────────────────────────────────────────────
+taHtml.value = `<h1>Hello, World! 🚀</h1>
+
+<p>Paste your <strong>HTML</strong> here — Markdown converts <em>live</em> on the right.</p>
+
+<h2>Features</h2>
+<ul>
+  <li>Live syntax highlighting in both panels</li>
+  <li>Rendered HTML view (left panel)</li>
+  <li>Markdown preview (right panel)</li>
+  <li>Download &amp; Copy</li>
+</ul>
+
+<h2>Code example</h2>
+<pre><code class="language-js">function greet(name) {
+  return \`Hello, \${name}!\`;
+}
+console.log(greet('World'));
+</code></pre>
+
+<blockquote>
+  <p>Switch to <strong>Rendered</strong> tab to see the HTML, and <strong>Preview</strong> to see the Markdown.</p>
+</blockquote>`;
+
+syncHl('ta-html', 'hl-html');
+convert();
+</script>
+</body>
+</html>
